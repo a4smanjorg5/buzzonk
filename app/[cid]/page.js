@@ -15,17 +15,12 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ErrorPage from 'next/error'
-import { Peer } from 'peerjs'
-
-const peer = new Peer({
-  debug: !process.env.NODE_ENV || process.env.NODE_ENV === 'development' ? 2 : 0,
-})
 
 const connData = (type, p) => {
   const result = connData.default[type]
   result.payload = p
   return result
-}
+}, isBrowser = typeof window != 'undefined'
 connData.default = {
   'BUZZ': { type: 'BUZZ' },
   'NAME': { type: 'NAME' },
@@ -33,9 +28,7 @@ connData.default = {
 }
 
 const peerDisconnect = () => peer.reconnect()
-let tconn = 0, ivc = 0
-
-peer.on('disconnected', peerDisconnect)
+let peer, tconn = 0, ivc = 0
 
 export default function Page({ params: { cid } }) {
   const router = useRouter()
@@ -43,7 +36,7 @@ export default function Page({ params: { cid } }) {
   [status, setStatus] = useState([
     'please wait, currently checking the requested host',
     'connecting to server (1/2)'
-  ]), [dn, setDN] = useState(sessionStorage.getItem('dn')),
+  ]), [dn, setDN] = useState(isBrowser && sessionStorage.getItem('dn')),
   [flashDN, setFlashDN] = useState(false),
   [called, setCall] = useState(0),
   [buzz, setBuzz] = useState(0)
@@ -52,26 +45,35 @@ export default function Page({ params: { cid } }) {
     if (!cid) return
     tconn = setTimeout(() => router.refresh(), 10000)
 
-    peer.once('open', () => {
-      clearTimeout(tconn)
-      tconn = 0
-      setStatus(status.concat(['connecting to peer host (2/2)']))
-      openConn()
+    const peerError = ({ type: errType }) => {
+      if (errType == 'peer-unavailable')
+        setTimeout(openConn, 4000)
+    }
+    import('peerjs').then(({ Peer }) => {
+      peer = new Peer({
+        debug: !process.env.NODE_ENV || process.env.NODE_ENV === 'development' ? 2 : 0,
+      })
+      peer.on('disconnected', peerDisconnect)
+      peer.on('error', peerError)
+
+      peer.once('open', () => {
+        clearTimeout(tconn)
+        tconn = 0
+        setStatus(status.concat(['connecting to peer host (2/2)']))
+        openConn()
+      })
     })
 
     return () => {
       if (!cid) return
       peer.off('disconnected', peerDisconnect)
+      peer.off('error', peerError)
       peer.host?.close()
       peer.disconnect()
     }
   }, [cid])
 
   useEffect(() => {
-    const peerError = ({ type: errType }) => {
-      if (errType == 'peer-unavailable')
-        setTimeout(openConn, 4000)
-    }
     if (host) {
       host.on('close', openConn)
 
@@ -83,13 +85,11 @@ export default function Page({ params: { cid } }) {
         sendMsg('TEAM', sessionStorage.getItem('team'))
       host.on('data', hostOnData)
     }
-    peer.on('error', peerError)
     return () => {
       if (host) {
         host.off('close', openConn)
         host.off('data', hostOnData)
       }
-      peer.off('error', peerError)
     }
   }, [host])
 

@@ -14,9 +14,7 @@ import ActionMessage from '@/components/action-message';
 import Checkbox from '@/components/checkbox';
 import SecondaryButton from '@/components/secondary-button'
 
-const peer = new (require('peerjs').Peer)(sessionStorage.getItem('cid'), {
-  debug: !process.env.NODE_ENV || process.env.NODE_ENV === 'development' ? 2 : 0,
-}), peers = {}, dashboard = {}
+const peers = {}, dashboard = {}, isBrowser = typeof window != 'undefined'
 
 const connData = (type, p) => {
   const result = connData.default[type]
@@ -30,24 +28,15 @@ connData.default = {
   'TIMEOUT': { type: 'TIMEOUT' },
 }
 
-let primeInt = 2, buzzState = [], beforeBuzz = 0, lockState = !0,
+let peer, primeInt = 2, buzzState = [], beforeBuzz = 0, lockState = !0,
 expState = false, lcA = 0, lcB = null
-
-peer.on('disconnected', () => setTimeout(() => {
-  if (peer.disconnected) peer.reconnect()
-}, nextPrime() * 400))
-peer.on('open', () => {
-  if (primeInt <= 2) return
-  console.clear()
-  primeInt = 2
-})
 
 export default function Host() {
   const [cids, setCid] = useState([]),
-  [hID, setHID] = useState(sessionStorage.getItem('cid') || ''),
+  [hID, setHID] = useState(isBrowser && sessionStorage.getItem('cid') || ''),
 
-  [cbt, setCBT] = useState(+sessionStorage.getItem('cbt') || 5),
-  [lto, setLTO] = useState(+sessionStorage.getItem('lto') || 10),
+  [cbt, setCBT] = useState(+(isBrowser && sessionStorage.getItem('cbt')) || 5),
+  [lto, setLTO] = useState(+(isBrowser && sessionStorage.getItem('lto')) || 10),
 
   [mtSuccess, setMTS] = useState(false),
   [buzz, setBuzz] = useState(buzzState),
@@ -94,13 +83,29 @@ export default function Host() {
       conn.timeout = 0
     }
 
-    peer.on('connection', connOpen)
-    peer.once('open', () => {
-      if (hID != peer.id) {
-        sessionStorage.setItem('cid', peer.id)
-        setHID(peer.id)
-      }
+    import('peerjs').then(({ Peer }) => {
+      peer = new Peer(sessionStorage.getItem('cid'), {
+        debug: !process.env.NODE_ENV || process.env.NODE_ENV === 'development' ? 2 : 0,
+      })
+
+      peer.on('disconnected', () => setTimeout(() => {
+        if (peer.disconnected) peer.reconnect()
+      }, nextPrime() * 400))
+      peer.on('open', () => {
+        if (primeInt <= 2) return
+        console.clear()
+        primeInt = 2
+      })
+
+      peer.on('connection', connOpen)
+      peer.once('open', () => {
+        if (hID != peer.id) {
+          sessionStorage.setItem('cid', peer.id)
+          setHID(peer.id)
+        }
+      })
     })
+
     return () => {
       peer.off('connection', connOpen)
     }
@@ -175,8 +180,8 @@ export default function Host() {
   buzzState = buzz
   expState = expired
   lockState = unlocked
-  if (peer.disconnected) peer.reconnect()
-  const hostURL = new URL('/' + hID, location)
+  if (peer?.disconnected) peer.reconnect()
+  const hostURL = isBrowser && new URL('/' + hID, location)
 
   return (
     <main className="flex min-h-screen flex-col gap-4 items-center p-24">
@@ -193,7 +198,7 @@ export default function Host() {
             value={hostURL}
             size={hostURL.length}
             onClick={({target}) => {
-              // navigator.share({ url: target.value })
+              navigator.share({ url: target.value })
               target.select()
               document.execCommand('copy')
             }}
