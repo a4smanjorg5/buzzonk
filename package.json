@@ -1,6 +1,7 @@
 {
   "name": "buzzonk",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,10 +10,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@headlessui/react": "^1.7.15",
     "autoprefixer": "10.4.14",
     "eslint": "8.43.0",
     "eslint-config-next": "13.4.7",
+    "github-fork-ribbon-css": "^0.2.3",
     "next": "13.4.7",
+    "node-cache": "^5.1.2",
+    "peerjs": "^1.4.7",
     "postcss": "8.4.24",
     "react": "18.2.0",
     "react-dom": "18.2.0",

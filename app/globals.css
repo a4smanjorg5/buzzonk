@@ -2,10 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * This file is part of the buzzonk app.
+ *
+ * (c) a4smanjorg5
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --buzz-max-w: calc(100vh - 12rem);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,6 +26,12 @@
   }
 }
 
+@keyframes dotload {
+  0% { content: ' . ' }
+  50% { content: ' . . ' }
+  100% { content: ' . . .' }
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -24,4 +40,12 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+.add-loading:after {
+  animation-name: dotload;
+  animation-duration: 2s ;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+  content: '.';
 }
